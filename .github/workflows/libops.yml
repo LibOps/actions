@@ -21,10 +21,10 @@ jobs:
       - self-hosted
       - development
     steps:
-    - name: Ensure inputs as valid
+    - name: Ensure inputs are valid and transform branch name to valid docker tag
       shell: bash
       run: |
-        if [[ ! "${{ inputs.branch }}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+        if [[ ! "${{ inputs.branch }}" =~ ^[a-zA-Z0-9._-\/]+$ ]]; then
           echo "ERROR: Invalid branch value. Must match ^[a-zA-Z0-9._-]+$"
           exit 1
         fi
@@ -32,6 +32,9 @@ jobs:
           echo "ERROR: Invalid action. Must be set or del"
           exit 1
         fi
+        TAG=$(echo "${{ inputs.branch }}" | sed 's/[^a-zA-Z0-9._-]//g' | awk '{print substr($0, length($0)-120)}')
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+      id: extract_tag
 
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -55,4 +58,4 @@ jobs:
           --env TF_VAR_libops_yaml=/code/libops.yml \
           --env GOOGLE_APPLICATION_CREDENTIALS=/code/$CRED_FILE \
           --env GOOGLE_PROJECT_ID="${{ secrets.GCLOUD_PROJECT }}" \
-          us-docker.pkg.dev/libops-images/shared/deploy:main "${{ inputs.action }}" "${{ inputs.branch }}" 
+          us-docker.pkg.dev/libops-images/shared/deploy:main "${{ inputs.action }}" "${{ steps.extract_tag.outputs.tag }}" 
